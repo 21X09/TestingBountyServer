@@ -174,7 +174,7 @@ def nuclei_scan(target: str, severity: str = "medium,high,critical", tags: str =
     return result
 
 @mcp.tool()
-def fuzz_paths(url: str, wordlist: str = "/usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt") -> str:
+def fuzz_paths(url: str, wordlist: str = "/usr/wordlists/share/seclists/Discovery/Web-Content/raft-medium-directories.txt") -> str:
     """Directory and file fuzzing with ffuf. Returns 200/301/302/403."""
     if not in_scope(url): return f"[BLOCKED] {url} out of scope."
     result = run(["ffuf", "-u", f"{url}/FUZZ", "-w", wordlist, "-mc", "200,301,302,403", "-t", "50", "-silent"], timeout=300)
